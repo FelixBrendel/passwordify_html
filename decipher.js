@@ -1,7 +1,9 @@
+
 function load_script(o_script, callback) {
 
     let script = document.createElement('script');
     script.type = o_script.type || 'text/javascript';
+
 
     if(o_script.hasAttribute('src')) {
         script.src = o_script.src;
@@ -11,7 +13,7 @@ function load_script(o_script, callback) {
     script.innerHTML = o_script.innerHTML;
     document.head.appendChild(script);
 
-    if(o_script.src === "") {
+    if (o_script.src === "") {
         // NOTE(Felix): it seems the onload is not called on script nodes that
         //   define the js inline instead of through a src attribute, so for
         //   them we call the callback manually and hope for the best.
@@ -23,7 +25,6 @@ var next_script_index = 0
 var deferred_scripts = []
 
 function load_next_deferred_script() {
-    console.log("recurse!")
     if (next_script_index >= deferred_scripts.length)
         return
 

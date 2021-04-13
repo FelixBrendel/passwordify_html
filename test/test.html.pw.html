@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Example</title>
+    
+<script type="text/javascript" src="https://cdn.rawgit.com/ricmoo/aes-js/e27b99df/index.js"></script>
+<script>
+  var master_key_enc_real_key = "04a2d6b170354946e39f6d53e8d8d341400c9fce9eb8a766398be99ecfc3bfff";
+  var org_key_enc_real_key    = "15d34714d9853ae918ec53a7fabae45cc9536c210f77ecb0822c275fe6c11b49";
+  var correct_key_marker      = "<!--Correct Key-->"
+  var initial_counter         =  5;
+  var enc_hex_body            = "d3e739429a8408b664023e88700b076cf058d57f6e10cd910c0b7fa4e01ba594b2e2d1a8c226b24022fe3f9ea15942fae2acd6fb70438677cf3925d522780f842a1f05512b3080589ee7148b7905327398df6c1bf8611fe11dd3fc857c0ca10dc5d1e4";
+</script>
+<script>
+function decrypt_page() {
+    var key_str = document.querySelector('input[name=pwd]').value
+    var html_name = window.location.pathname;
+    var allcookies = document.cookie;
+    cookiearray = allcookies.split(';');
+    for(var i=0; i<cookiearray.length; i++) {
+        name = cookiearray[i].split('=')[0].trim();
+        value = cookiearray[i].split('=')[1];
+        if (name == html_name)
+            key_str = value;
+        if (name == "__master__") {
+            key_str = value;
+            break;
+        }
+    }
+
+    // check key length
+    if (key_str.length != 16 &&
+        key_str.length != 24 &&
+        key_str.length != 32)
+    {
+        return;
+    }
+    var entered_key = aesjs.utils.utf8.toBytes(key_str);
+    var enc_bytes = aesjs.utils.hex.toBytes(enc_hex_body)
+
+    // check if the user input / loaded cookie is the master key
+    var aesCtr = new aesjs.ModeOfOperation.ctr(entered_key, new aesjs.Counter(initial_counter))
+    var master_key_dec_real_key = aesCtr.decrypt(aesjs.utils.hex.toBytes(master_key_enc_real_key))
+
+    aesCtr = new aesjs.ModeOfOperation.ctr(master_key_dec_real_key, new aesjs.Counter(initial_counter))
+    var dec_bytes = aesCtr.decrypt(enc_bytes)
+
+    // Convert our bytes back into text
+    var dec_text = aesjs.utils.utf8.fromBytes(dec_bytes)
+    if (!dec_text.startsWith(correct_key_marker)) {
+        // check if it is a regular password
+        aesCtr = new aesjs.ModeOfOperation.ctr(entered_key, new aesjs.Counter(initial_counter))
+        var org_key_dec_real_key = aesCtr.decrypt(aesjs.utils.hex.toBytes(org_key_enc_real_key))
+
+        aesCtr = new aesjs.ModeOfOperation.ctr(org_key_dec_real_key, new aesjs.Counter(initial_counter))
+        dec_bytes = aesCtr.decrypt(enc_bytes)
+        dec_text  = aesjs.utils.utf8.fromBytes(dec_bytes)
+
+        if (!dec_text.startsWith(correct_key_marker)) {
+            key_str = "";
+            return
+        } else {
+            // entered correct file key
+            document.cookie = html_name + "=" + key_str;
+        }
+    } else {
+        // entered correct master key
+        document.cookie = "__master__=" + key_str;
+    }
+
+    // Convert our bytes back into text
+    // var dec_text = aesjs.utils.utf8.fromBytes(dec_bytes)
+    var dec_text = new TextDecoder().decode(dec_bytes)
+    document.body.innerHTML = dec_text
+}
+
+</script>
+</head>
+     
+<body>
+<div style="position: absolute; left: 50%; top: 50%; -webkit-transform: translate(-50%, -50%); transform: translate(-50%, -50%);">
+    <p id="sd" onclick="decrypt_page()" style="margin: 0 auto;font-size:100px;text-align:center">🔒</p>
+    <input type="password" id="pwd" name="pwd">
+</div>
+
+</body> 
+</html>
